@@ -11,17 +11,15 @@ neighboursOf (a,b) = [(x,y)| x <- f a, y <- f b] \\ [(a,b)]
 survive :: [(Int,Int)] -> [(Int, Int)] -> [(Int,Int)]
 survive [] world = []
 survive (cell:cells) world
-  | aliveN == 2 || aliveN == 3 = cell:next
-  | otherwise = next
-  where
-    aliveN = length $ (neighboursOf cell) `intersect` world
-    next = survive cells world
+  | aliveN == 2 || aliveN == 3 = cell:(survive cells world)
+  | otherwise = survive cells world
+  where aliveN = length $ (neighboursOf cell) `intersect` world
 
 produce :: [(Int,Int)] -> [(Int,Int)]
-produce cells =  [ x | x <- dCellsWith3NOrMore, counts dCellsWith3NOrMore x == 1] \\ cells
+produce cells =  [ x | x <- deadCellsWith3NOrMore, counts deadCellsWith3NOrMore x == 1] \\ cells
 --note: if a dead cell has more than 3 neighbours, it would appear more than 1 time in the list dCellsWith3NOrMore
  where
-    dCellsWith3NOrMore = concat $ [nIntersect xs | xs <- powerset cells, length xs == 3 ]
+    deadCellsWith3NOrMore = concat $ [nIntersect xs | xs <- powerset cells, length xs == 3 ]
     nIntersect (x:[]) = neighboursOf x
     nIntersect (x:xs) = neighboursOf x `intersect` nIntersect xs
     counts [] x = 0
@@ -31,7 +29,10 @@ produce cells =  [ x | x <- dCellsWith3NOrMore, counts dCellsWith3NOrMore x == 1
 
 makeNewWorld :: [(Int,Int)] -> Int -> [(Int,Int)]
 makeNewWorld cells 0 = cells
-makeNewWorld cells n = makeNewWorld ((survive cells cells) `union` (produce cells)) (n-1)
+makeNewWorld cells n = makeNewWorld ((survive cells cells) ++ (produce cells)) (n-1)
+-- this function is in more of the accumulator style (rather than being structurally recursive)
+-- I don't think a structurally recursive implementation makes sense here.
+
 
 testMakeNewWorld :: [(Int,Int)] -> Int -> [(Int,Int)] -> Bool
 testMakeNewWorld world n newWorld = null ((makeNewWorld world n) \\ newWorld)
@@ -47,7 +48,7 @@ testcases = [([(0,0)],1,[]),
              ([(0,0),(0,1),(1,1)],1,[(1,0),(0,0),(0,1),(1,1)]),
              ([(0,0),(0,1),(1,1)],99,[(1,0),(0,0),(0,1),(1,1)])]
 
--- main = print $ testGameOfLife testcases
+-- main = print $ runTests testcases
 
 main = do
       putStrLn "Hello, please enter the initial state of the game! e.g [(0,0),(0,1)] "
